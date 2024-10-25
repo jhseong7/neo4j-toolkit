@@ -1,5 +1,6 @@
 import { Driver, session } from "neo4j-driver";
 import { SessionPoolManager } from "./manager";
+import { NoSessionException } from "./exception";
 
 describe("SessionPoolManager", () => {
   // mock the Driver
@@ -32,6 +33,33 @@ describe("SessionPoolManager", () => {
 
     // Expect the session function to be called the correct number of times
     expect(mockDriver.session).toHaveBeenCalledTimes(numberOfSessions);
+  });
+
+  it("Throw error if the number of sessions exceeds the max session limit", () => {
+    const mockLastBookmark = jest.fn();
+    const mockDriver = {
+      session: jest.fn(() => ({ lastBookmarks: mockLastBookmark })),
+    } as unknown as Driver;
+
+    // Create the pool manager with random number of sessions between 10 and 30
+    const numberOfSessions = Math.floor(Math.random() * 20) + 10;
+
+    // Create the pool manager
+    const manager = new SessionPoolManager({
+      neo4jDriver: mockDriver,
+      numberOfSessions,
+    });
+
+    // Expect the session function to be called the correct number of times
+    expect(mockDriver.session).toHaveBeenCalledTimes(numberOfSessions);
+
+    // Call the getSession function to the number of sessions count
+    for (let i = 0; i < numberOfSessions; i++) {
+      manager.getSession();
+    }
+
+    // Expect an error to be thrown on the next call
+    expect(() => manager.getSession()).toThrow(NoSessionException);
   });
 
   it("Should call close on all the sessions when shutdown is called", async () => {
