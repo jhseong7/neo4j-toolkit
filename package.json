@@ -5,7 +5,6 @@
   "main": "dist/index.js",
   "repository": "https://github.com/jhseong7/neo4j-toolkit",
   "author": "jhseong7",
-  "license": "MIT",
   "peerDependencies": {
     "neo4j-driver": "^5.26.0"
   },

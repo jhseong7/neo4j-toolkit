@@ -1,31 +1,27 @@
 import type { Neo4jPrimitive, Neo4jProperties } from "@/types";
 
-import { QueryBuilderException } from "./exception";
-import type { IQueryBuilder, ParameterizedQuery } from "./type";
-import { replaceQueryParameters } from "./util";
+import { QueryBuilderException } from "../exception";
+import type { IQueryBuilder, ParameterizedQuery } from "../type";
+import { replaceQueryParameters } from "../util";
+import { CommonBuilder } from "./base-builder";
 
-type NodeMatchBuilderContructor = {
+export type NodePatternBuilderContructor = {
   alias?: string;
   labels?: string[];
-  properties: Neo4jProperties;
+  properties?: Neo4jProperties;
 };
 
-type NodeMatchBuilderValidationResult =
+type NodePatternBuilderValidationResult =
   | { success: true }
   | { success: false; message: string };
 
 // Class do build a match query for single nodes
-export class NodeMatchBuilder implements IQueryBuilder {
-  // The alias letter of the node
-  private _alias?: string;
-
+export class NodePatternBuilder extends CommonBuilder implements IQueryBuilder {
   // The labels of the node to select
   private _labels?: Set<string>;
 
-  // The raw properties of the node to select {key: value}
-  private _rawProperties?: Neo4jProperties;
-
-  constructor(params?: NodeMatchBuilderContructor) {
+  constructor(params?: NodePatternBuilderContructor) {
+    super();
     if (!params) return;
 
     this._alias = params.alias;
@@ -34,21 +30,12 @@ export class NodeMatchBuilder implements IQueryBuilder {
   }
 
   /**
-   * alternative constructor for the NodeMatchBuilder
+   * alternative constructor for the NodePatternBuilder
    * @param params
    * @returns
    */
-  static new(params: NodeMatchBuilderContructor): NodeMatchBuilder {
-    return new NodeMatchBuilder(params);
-  }
-
-  /**
-   * Returns the parameter key for the given key. This is used to create a parameterized query
-   * @param key
-   * @returns
-   */
-  private _getParameterKey(key: string): string {
-    return `${this._alias}_${key}`;
+  public static new(params?: NodePatternBuilderContructor): NodePatternBuilder {
+    return new NodePatternBuilder(params);
   }
 
   /**
@@ -56,14 +43,15 @@ export class NodeMatchBuilder implements IQueryBuilder {
    * @returns true if the query is valid, false otherwise
    * @private
    */
-  private _checkValid(): NodeMatchBuilderValidationResult {
-    if (!this._alias) return { success: false, message: "Alias is not set" };
-    if (!this._labels && !this._rawProperties) {
-      return {
-        success: false,
-        message: "Atleast one label or property must be set",
-      };
-    }
+  private _checkValid(): NodePatternBuilderValidationResult {
+    // NOTE: alias can be null, it will only cause an error when building the full query
+    // if (!this._alias) return { success: false, message: "Alias is not set" };
+    // if (!this._labels && !this._rawProperties) {
+    //   return {
+    //     success: false,
+    //     message: "At least one label or property must be set",
+    //   };
+    // }
 
     return {
       success: true,
@@ -75,7 +63,7 @@ export class NodeMatchBuilder implements IQueryBuilder {
    * @returns
    */
   private _getLabels(): string {
-    if (!this._labels) {
+    if (!this._labels || this._labels.size === 0) {
       return "";
     }
 
@@ -83,33 +71,17 @@ export class NodeMatchBuilder implements IQueryBuilder {
   }
 
   /**
-   * Get the parameterized properties of the node. This is used to create a parameterized query
-   * @returns
-   */
-  private _getParameterizedProperties() {
-    const queryObjs: string[] = [];
-    const parameters = Object.entries(this._rawProperties ?? {}).reduce(
-      (acc, [key, value]) => {
-        const paramKey = this._getParameterKey(key);
-        queryObjs.push(`${key}: $${paramKey}`); // NOTE: add $ to the parameter key
-        acc[paramKey] = value;
-        return acc;
-      },
-      {} as Neo4jProperties
-    );
-
-    return {
-      query: ` {${queryObjs.join(", ")}}`,
-      parameters,
-    };
-  }
-
-  /**
    * Set the alias of the node (overwrites the previous alias)
    * @param alias
    * @returns
    */
-  public setAlias(alias: string): NodeMatchBuilder {
+  public setAlias(alias: string): NodePatternBuilder {
+    if (this._alias) {
+      this._printWarning(
+        `Alias ${this._alias} will be overwritten with ${alias}`
+      );
+    }
+
     this._alias = alias;
     return this;
   }
@@ -119,7 +91,19 @@ export class NodeMatchBuilder implements IQueryBuilder {
    * @param labels The labels to replace the existing labels
    * @returns
    */
-  public setLabels(labels: string[]): NodeMatchBuilder {
+  public setLabels(labels: string[]): NodePatternBuilder {
+    if (labels.length === 0) {
+      throw new QueryBuilderException("At least one label must be provided");
+    }
+
+    if (this._labels && this._labels.size > 0) {
+      this._printWarning(
+        `Labels ${Array.from(this._labels).join(
+          ", "
+        )} will be overwritten with ${labels.join(", ")}`
+      );
+    }
+
     this._labels = new Set(labels);
     return this;
   }
@@ -129,14 +113,14 @@ export class NodeMatchBuilder implements IQueryBuilder {
    * @param label The label to add
    * @returns
    */
-  public addLabel(label: string): NodeMatchBuilder {
+  public addLabel(label: string): NodePatternBuilder {
     if (!this._labels) {
       this._labels = new Set();
     }
 
     // If the label already exists, show a warning
     if (this._labels.has(label)) {
-      console.warn(`Label ${label} already exists`);
+      this._printWarning(`Label ${label} already exists`);
     }
 
     this._labels.add(label);
@@ -148,7 +132,7 @@ export class NodeMatchBuilder implements IQueryBuilder {
    * @param properties The properties to set
    * @returns
    */
-  public setProperties(properties: Neo4jProperties): NodeMatchBuilder {
+  public setProperties(properties: Neo4jProperties): NodePatternBuilder {
     this._rawProperties = properties;
     return this;
   }
@@ -159,12 +143,31 @@ export class NodeMatchBuilder implements IQueryBuilder {
    * @param value The value of the property
    * @returns
    */
-  public addProperty(key: string, value: Neo4jPrimitive): NodeMatchBuilder {
+  public addProperty(key: string, value: Neo4jPrimitive): NodePatternBuilder {
     if (!this._rawProperties) {
       this._rawProperties = {};
     }
 
+    if (this._rawProperties[key]) {
+      this._printWarning(
+        `Property ${key} already exists. It will be overwritten`
+      );
+    }
+
     this._rawProperties[key] = value;
+    return this;
+  }
+
+  /**
+   * Add multiple properties to the node
+   * @param properties
+   * @returns
+   */
+  public addProperties(properties: Neo4jProperties): NodePatternBuilder {
+    for (const key in properties) {
+      this.addProperty(key, properties[key]);
+    }
+
     return this;
   }
 
@@ -186,7 +189,8 @@ export class NodeMatchBuilder implements IQueryBuilder {
 
     // In format: (alias:Label {properties}) or (alias {properties}) or (alias:Label)
     return {
-      query: `(${this._alias}${labels}${properties.query})`,
+      alias: this._getAlias(), // This not null if _checkValid passes
+      query: `(${this._getAlias()}${labels}${properties.query})`,
       parameters: properties.parameters,
     };
   }
@@ -206,5 +210,3 @@ export class NodeMatchBuilder implements IQueryBuilder {
     return this.toRawQuery();
   }
 }
-
-export class Neo4jQueryBuilder {}
