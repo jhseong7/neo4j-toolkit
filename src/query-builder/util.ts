@@ -33,8 +33,12 @@ export function replaceQueryParameters(
 
 export function mergeProperties(
   properties: Neo4jProperties,
-  newProperties: Neo4jProperties
+  newProperties: Neo4jProperties | undefined
 ) {
+  if (!newProperties) {
+    return;
+  }
+
   Object.entries(newProperties).forEach(([key, value]) => {
     properties[key] = value;
   });

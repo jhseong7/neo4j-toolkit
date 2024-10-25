@@ -8,7 +8,7 @@ type SessionFromPool = {
   done: () => void;
 };
 
-type SessionPoolConstructorParams = {
+export type SessionPoolConstructorParams = {
   neo4jDriver: Driver;
 
   numberOfSessions?: number;
