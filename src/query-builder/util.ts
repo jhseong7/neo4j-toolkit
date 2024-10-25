@@ -1,3 +1,4 @@
+import { Neo4jProperties } from "../types";
 import { ParameterizedQuery } from "./type";
 
 export function replaceQueryParameters(
@@ -13,4 +14,13 @@ export function replaceQueryParameters(
   }
 
   return replacedQuery;
+}
+
+export function mergeProperties(
+  properties: Neo4jProperties,
+  newProperties: Neo4jProperties
+) {
+  Object.entries(newProperties).forEach(([key, value]) => {
+    properties[key] = value;
+  });
 }
