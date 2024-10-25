@@ -1,6 +1,6 @@
 import { Neo4jProperties } from "../types";
 import { QueryBuilderException } from "./exception";
-import { mergeProperties } from "./util";
+import { mergeProperties, replaceQueryParameters } from "./util";
 
 type WhereStatement = {
   statement: string;
@@ -84,7 +84,7 @@ export class WhereClauseBuilder {
    */
   private _randomizeKey(key: string): string {
     // Add a randomKey to the end of the key
-    return `${key}_${Math.floor(Math.random() * 100).toString(36)}`;
+    return `${key}_${Math.floor(Math.random() * 10000).toString(36)}`;
   }
 
   private _printWarning(message: string) {
@@ -124,7 +124,7 @@ export class WhereClauseBuilder {
     for (const key of keys) {
       const newKey = this._randomizeKey(key);
       newStatement = statement.replace(key, newKey);
-      newParameters[newKey] = parameters[key.substring(1)]; // Drop the $ from the key
+      newParameters[newKey.substring(1)] = parameters[key.substring(1)]; // Drop the $ from the key
     }
 
     return {
@@ -153,11 +153,6 @@ export class WhereClauseBuilder {
     statement: string,
     parameters?: Neo4jProperties
   ): WhereNodeStatement {
-    // Check if the alias is valid
-    if (!this._checkAliasValid(statement)) {
-      throw new QueryBuilderException("Invalid alias in the where clause");
-    }
-
     // Check if the parameters are valid
     if (parameters && !this._checkParameterValid(statement, parameters)) {
       throw new QueryBuilderException(
@@ -301,6 +296,14 @@ export class WhereClauseBuilder {
       switch (node.type) {
         case "statement": {
           const { statement, parameters } = node;
+
+          // validate the alias
+          if (!this._checkAliasValid(statement)) {
+            throw new QueryBuilderException(
+              "The alias in the statement is not valid. Check if the alias is in the match, create, with, merge or optional match clause"
+            );
+          }
+
           currentQueryList.push(statement);
           mergeProperties(currentParameters, parameters);
           break;
@@ -329,10 +332,20 @@ export class WhereClauseBuilder {
     };
   }
 
+  public setAliasList(aliases: string[]) {
+    this._aliasSet = new Set(aliases);
+  }
+
   public toParameterizedQuery() {
     // In order -> build the where clause
     const result = this._buildNodes(this._whereNodeList, [], this._parameters);
 
     return result;
+  }
+
+  public toRawQuery() {
+    const { query, parameters } = this.toParameterizedQuery();
+
+    return replaceQueryParameters(query, parameters);
   }
 }

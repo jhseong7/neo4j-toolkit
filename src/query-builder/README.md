@@ -56,4 +56,149 @@ Not all syntaxes are supported. The following are the known, unsupported syntaxe
 
 - Where clause in the the path pattern
   - e.g.) `(a where a.name = 'John')-[:KNOWS]->(b)`
--
+- ***
+
+## Query Builder
+
+### Usage
+
+> Basic node and relationship query
+
+```typescript
+/**
+ * MATCH (a)-[r]->(b)
+ * RETURN a, r, b
+ */
+const builder = QueryBuilder.new()
+  .match((p) => {
+    p.setNode({ alias: "a" });
+    .toRelationship({ alias: "r" });
+    .toNode({ alias: "b" });
+  })
+  .return(r => {
+    r.add("a")
+    .add("r")
+    .add("b");
+  });
+```
+
+> Basic query with where clause
+
+```typescript
+/**
+ * MATCH (a)-[r]->(b)
+ * WHERE a.name = 'John'
+ * RETURN a, r, b
+ */
+const builder = QueryBuilder.new()
+  .match((p) => {
+    p.setNode({ alias: "a" });
+    .toRelationship({ alias: "r" });
+    .toNode({ alias: "b" });
+  })
+  .where((w) => {
+    w.add("a.name = 'John'");
+  })
+  .return(r => {
+    r.add("a")
+    .add("r")
+    .add("b");
+  });
+```
+
+> Basic query with label and property + AND condition
+
+```typescript
+/**
+ * MATCH (a:Person { type: "human" })-[r]->(b)
+ * WHERE a.name = 'John' AND b.age > 20
+ * RETURN a, r, b
+ */
+const builder = QueryBuilder.new()
+  .match((p) => {
+    p.setNode({
+      alias: "a",
+      labels: ["Person"],
+      properties: { type: "human" },
+    })
+    .toRelationship({ alias: "r" });
+    .toNode({ alias: "b" });
+  })
+  .where((w) => {
+    w.add("a.name = 'John'")
+    .and("b.age > 20");
+  })
+  .return(r => {
+    r.add("a")
+    .add("r")
+    .add("b");
+  });
+```
+
+> Basic query with OR clause
+
+```typescript
+/**
+ * MATCH (a:Person { type: "human" })-[r]->(b)
+ * WHERE a.name = 'John' OR b.age > 20
+ * RETURN a, r, b
+ */
+const builder = QueryBuilder.new()
+  .match((p) => {
+    p.setNode({
+      alias: "a",
+      labels: ["Person"],
+      properties: { type: "human" },
+    })
+    .toRelationship({ alias: "r" });
+    .toNode({ alias: "b" });
+  })
+  .where((w) => {
+    w.add("a.name = 'John'")
+    .or("b.age > 20");
+  })
+  .return(r => {
+    r.add("a")
+    .add("r")
+    .add("b");
+  });
+```
+
+> Basic query with AND and OR clause with bracketed conditions
+
+```typescript
+/**
+ * MATCH (a:Person { type: "human" })-[r]->(b)
+ * WHERE a.name = 'John' AND (b.age > 20 OR b.age < 10)
+ * RETURN a as AliasA, r, b
+ */
+const builder = QueryBuilder.new()
+  .match((p) => {
+    p.setNode({
+      alias: "a",
+      labels: ["Person"],
+      properties: { type: "human" },
+    })
+    .toRelationship({ alias: "r" });
+    .toNode({ alias: "b" });
+  })
+  .where((w) => {
+    w.add("a.name = 'John'")
+    .and((w) => {
+      w.add("b.age > 20")
+      .or("b.age < 10");
+    });
+  })
+  .return(r => {
+      r.add("a", "AliasA")
+      .add("r")
+      .add("b");
+    });
+```
+
+### Limitations
+
+unsupported syntaxes (YET! 😅. Will try to support in the future):
+
+- WITH clause
+- CASE clause
