@@ -13,7 +13,7 @@ describe("SessionPoolManager", () => {
         neo4jDriver: {} as Driver,
         numberOfSessions: 0,
       });
-    }).toThrow("numberOfSessions must be greater than 0");
+    }).toThrow("maxSession must be greater than 0");
   });
 
   it("Should call the session function the correct number of times", () => {
@@ -61,5 +61,75 @@ describe("SessionPoolManager", () => {
 
     // Expect the close function to be called the correct number of times
     expect(mockDriver.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("Test idle session timeout", async () => {
+    const mockLastBookmark = jest.fn();
+    const mockDriver = {
+      session: jest.fn(() => ({ lastBookmarks: mockLastBookmark })),
+      close: jest.fn(),
+    } as unknown as Driver;
+
+    // Create the pool manager with random number of sessions between 10 and 30
+    const numberOfSessions = Math.floor(Math.random() * 20) + 10;
+
+    // Create the pool manager
+    const manager = new SessionPoolManager({
+      neo4jDriver: mockDriver,
+      numberOfSessions,
+      idleTimeoutMs: 1000, // 1 second
+    });
+
+    // Get the session
+    const sessionFromPool = manager.getSession();
+    const { session, done } = sessionFromPool;
+
+    // Wait for 2 seconds
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Must throw an error due to the session being closed
+    expect(() => session.lastBookmarks()).toThrow();
+    expect(done()).toEqual(false);
+  });
+
+  it("Test the idle session timeout extension", async () => {
+    const mockLastBookmark = jest.fn();
+    const mockDriver = {
+      session: jest.fn(() => ({ lastBookmarks: mockLastBookmark })),
+      close: jest.fn(),
+    } as unknown as Driver;
+
+    // Create the pool manager with random number of sessions between 10 and 30
+    const maxSession = Math.floor(Math.random() * 20) + 10;
+
+    // Create the pool manager
+    const manager = new SessionPoolManager({
+      neo4jDriver: mockDriver,
+      numberOfSessions: maxSession,
+      idleTimeoutMs: 700, // 1 second
+    });
+
+    // Get the session
+    const sessionFromPool = manager.getSession();
+    const { session, done } = sessionFromPool;
+
+    // Wait for 500ms
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Call the session last bookmarks to extend the idle timeout
+    expect(() => session.lastBookmarks()).not.toThrow();
+
+    // Wait for 500ms
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    expect(() => session.lastBookmarks()).not.toThrow();
+
+    // Wait for 500ms
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Must not throw an error due to the session being closed
+    expect(() => session.lastBookmarks()).not.toThrow();
+
+    expect(done()).toEqual(true);
   });
 });
