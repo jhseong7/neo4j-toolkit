@@ -128,4 +128,11 @@ describe("NodeBuilder", () => {
       `(n:${randomLabel1}:${randomLabel2} {prop1: "value1", prop2: 10, prop3: true})`
     );
   });
+
+  it("Test function calls in the properties (direct pass to query)", () => {
+    const builder = NodePatternBuilder.new()
+      .setAlias("n")
+      .addProperty("prop1", () => "time('2021-01-01')");
+    expect(builder.toRawQuery()).toBe(`(n {prop1: time('2021-01-01')})`);
+  });
 });

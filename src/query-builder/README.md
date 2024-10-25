@@ -49,3 +49,11 @@ console.log(result);
 - If the builder starts with `setRelationship`, depending on the direction of the next path, a head node expression will automatically be added.
   - e.g.) `setRelationship` -> `toNode` will be converted to `()-[]->()`
   - e.g.) `setRelationship` -> `fromNode` will be converted to `()<-[]-()`
+
+### Limitations
+
+Not all syntaxes are supported. The following are the known, unsupported syntaxes:
+
+- Where clause in the the path pattern
+  - e.g.) `(a where a.name = 'John')-[:KNOWS]->(b)`
+-

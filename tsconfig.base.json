@@ -9,8 +9,9 @@
     "declaration": true, // Generates corresponding '.d.ts' file
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "baseUrl": "./"
   },
   "include": ["src/**/*"], // Include all TypeScript files in the src directory
-  "exclude": ["node_modules"] // Exclude node_modules
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts"]
 }
