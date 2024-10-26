@@ -166,7 +166,7 @@ export class RelationPatternBuilder
 
     // In format: (alias:Label {properties}) or (alias {properties}) or (alias:Label)
     return {
-      alias: this._getAlias(),
+      aliasSet: new Set([this._getAlias()]),
       query: `[${this._getAlias()}${labels}${properties.query}]`,
       parameters: properties.parameters,
     };

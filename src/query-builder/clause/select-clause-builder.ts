@@ -9,7 +9,7 @@ import {
   replaceQueryParameters,
 } from "../util";
 import { QueryBuilderException } from "../exception";
-import { IQueryBuilder } from "../type";
+import { IQueryBuilder, ParameterizedQuery } from "../type";
 import { PathPatternBuilder } from "../path-pattern-builder";
 
 type PathPatternBuilderFunction = (builder: PathPatternBuilder) => unknown;
@@ -29,11 +29,12 @@ export class PathPatternCommonClauseBuilder implements IQueryBuilder {
 
   protected _mergeAliasSet(targetSet: Set<string>, sourceSet: Set<string>) {
     for (const alias of sourceSet) {
-      if (targetSet.has(alias)) {
-        throw new QueryBuilderException(
-          `The alias ${alias} is already in the set of aliases`
-        );
-      }
+      // NOTE: the same alias can be used multiple times in the same query, so this check is not needed
+      // if (targetSet.has(alias)) {
+      //   throw new QueryBuilderException(
+      //     `The alias ${alias} is already in the set of aliases`
+      //   );
+      // }
 
       targetSet.add(alias);
     }
@@ -53,11 +54,24 @@ export class PathPatternCommonClauseBuilder implements IQueryBuilder {
     builder: PathPatternBuilderFunction
   ): PathPatternCommonClauseBuilder;
 
+  /**
+   * Add the finised builder to the create clause
+   * @param builder
+   */
   public addPathPattern(
-    arg1: PathPatternBuilderFunction | string
+    builder: PathPatternBuilder
+  ): PathPatternCommonClauseBuilder;
+
+  public addPathPattern(
+    arg1: PathPatternBuilderFunction | string | PathPatternBuilder
   ): PathPatternCommonClauseBuilder {
     // Case of direct statement
     if (typeof arg1 === "string") {
+      this.pathPatternBuilders.push(arg1);
+      return this;
+    }
+
+    if (arg1 instanceof PathPatternBuilder) {
       this.pathPatternBuilders.push(arg1);
       return this;
     }
@@ -74,7 +88,7 @@ export class PathPatternCommonClauseBuilder implements IQueryBuilder {
    * Builder the query and parameters
    * @returns
    */
-  public toParameterizedQuery() {
+  public toParameterizedQuery(): ParameterizedQuery {
     const queryList: string[] = [];
     const parameters: Neo4jProperties = {};
     const aliasSet = new Set<string>();
@@ -107,7 +121,7 @@ export class PathPatternCommonClauseBuilder implements IQueryBuilder {
 
     // Return the query and parameters
     return {
-      aliases: Array.from(aliasSet),
+      aliasSet: new Set(aliasSet),
       query:
         queryList.length > 0
           ? this._queryPrefix + " " + queryList.join(", ")

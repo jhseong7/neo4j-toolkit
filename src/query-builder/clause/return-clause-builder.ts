@@ -26,18 +26,16 @@ export class ReturnClauseBuilder implements IQueryBuilder {
     return true;
   }
 
+  public setAliasList(aliases: string[]): ReturnClauseBuilder {
+    this._aliasSet = new Set(aliases);
+    return this;
+  }
+
   public add(statement: string, alias?: string): ReturnClauseBuilder {
     // Special case for asterisk
     if (statement === "*") {
       this._returnStatements.push(statement);
       return this;
-    }
-
-    // Validate the alias
-    if (!this._checkAlias(statement)) {
-      throw new QueryBuilderException(
-        `The alias is not defined in the query. Please provide an alias included in the previous statements: ${statement}`
-      );
     }
 
     if (alias) {
@@ -55,6 +53,15 @@ export class ReturnClauseBuilder implements IQueryBuilder {
         query: "",
         parameters: {},
       };
+    }
+
+    // Validate the statements on build
+    for (const statement of this._returnStatements) {
+      if (!this._checkAlias(statement)) {
+        throw new QueryBuilderException(
+          `The alias in the statement is not valid. Check if the alias is in the match, create, with, merge or optional match clause`
+        );
+      }
     }
 
     return {

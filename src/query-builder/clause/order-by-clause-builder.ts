@@ -1,3 +1,4 @@
+import { QueryBuilderException } from "../exception";
 import { IQueryBuilder, ParameterizedQuery } from "../type";
 import { extractAliasFromSet } from "../util";
 
@@ -24,18 +25,19 @@ export class OrderByClauseBuilder implements IQueryBuilder {
     return true;
   }
 
+  public setAliasList(aliases: string[]): OrderByClauseBuilder {
+    this._aliasSet = new Set(aliases);
+    return this;
+  }
+
   public add(
     statement: string,
     direction: "ASC" | "DESC" = "ASC"
   ): OrderByClauseBuilder {
-    if (!this._checkAlias(statement)) {
-      throw new Error(
-        `The alias is not defined in the query. Please provide an alias included in the previous statements: ${statement}`
-      );
-    }
-
     if (direction !== "ASC" && direction !== "DESC") {
-      throw new Error(`The direction must be either 'ASC' or 'DESC'`);
+      throw new QueryBuilderException(
+        `The direction must be either 'ASC' or 'DESC'`
+      );
     }
 
     this._orderByStatements.push(`${statement} ${direction}`);
@@ -48,6 +50,15 @@ export class OrderByClauseBuilder implements IQueryBuilder {
         query: "",
         parameters: {},
       };
+    }
+
+    // Check alias validity on build
+    for (const statement of this._orderByStatements) {
+      if (!this._checkAlias(statement)) {
+        throw new QueryBuilderException(
+          `The alias is not defined in the query. Please provide an alias included in the previous statements: ${statement}`
+        );
+      }
     }
 
     return {

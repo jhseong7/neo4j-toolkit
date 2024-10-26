@@ -295,6 +295,7 @@ export class WhereClauseBuilder {
 
   public setAliasList(aliases: string[]) {
     this._aliasSet = new Set(aliases);
+    return this;
   }
 
   public toParameterizedQuery() {

@@ -21,7 +21,7 @@ describe("OrderByClauseBuilder", () => {
     const TEST_STATEMENT = "n.name";
 
     expect(() => {
-      new OrderByClauseBuilder().add(TEST_STATEMENT);
+      new OrderByClauseBuilder().add(TEST_STATEMENT).toRawQuery();
     }).toThrow();
   });
 
@@ -29,10 +29,9 @@ describe("OrderByClauseBuilder", () => {
     const TEST_STATEMENT = "n.name";
 
     expect(() => {
-      new OrderByClauseBuilder({ aliases: ["a"] }).add(
-        TEST_STATEMENT,
-        "SOME" as any
-      );
+      new OrderByClauseBuilder({ aliases: ["a"] })
+        .add(TEST_STATEMENT, "SOME" as any)
+        .toRawQuery();
     }).toThrow();
   });
 
@@ -78,7 +77,7 @@ describe("OrderByClauseBuilder", () => {
     const builder = new OrderByClauseBuilder({ aliases: ["n", "m"] });
 
     expect(() => {
-      builder.add("n.name").add("k.age", "ASC");
+      builder.add("n.name").add("k.age", "ASC").toRawQuery();
     }).toThrow();
   });
 
@@ -97,5 +96,14 @@ describe("OrderByClauseBuilder", () => {
     const builder = new OrderByClauseBuilder({ aliases: ["n"] }).add("n.name");
 
     expect(builder.toRawQuery()).toBe("ORDER BY n.name ASC");
+  });
+
+  it("Test setAlias", () => {
+    const builder = new OrderByClauseBuilder()
+      .add("n.name")
+      .add("m.age")
+      .setAliasList(["n", "m"]);
+
+    expect(builder.toRawQuery()).toBe("ORDER BY n.name ASC, m.age ASC");
   });
 });

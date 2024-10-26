@@ -189,7 +189,7 @@ export class NodePatternBuilder extends CommonBuilder implements IQueryBuilder {
 
     // In format: (alias:Label {properties}) or (alias {properties}) or (alias:Label)
     return {
-      alias: this._getAlias(), // This not null if _checkValid passes
+      aliasSet: new Set([this._getAlias()]), // This not null if _checkValid passes
       query: `(${this._getAlias()}${labels}${properties.query})`,
       parameters: properties.parameters,
     };
