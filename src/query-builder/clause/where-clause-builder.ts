@@ -1,6 +1,11 @@
-import { Neo4jProperties } from "../types";
-import { QueryBuilderException } from "./exception";
-import { mergeProperties, replaceQueryParameters } from "./util";
+import { Neo4jProperties } from "../../types";
+import { QueryBuilderException } from "../exception";
+import {
+  extractAliasFromSet,
+  mergeProperties,
+  randomizeParameterKeys,
+  replaceQueryParameters,
+} from "../util";
 
 type WhereStatement = {
   statement: string;
@@ -77,76 +82,32 @@ export class WhereClauseBuilder {
     return true;
   }
 
-  /**
-   * Randomize the key to prevent key collision for the parameters for each statement
-   * @param key
-   * @returns
-   */
-  private _randomizeKey(key: string): string {
-    // Add a randomKey to the end of the key
-    return `${key}_${Math.floor(Math.random() * 10000).toString(36)}`;
-  }
-
   private _printWarning(message: string) {
     console.warn(`[WARNING]: ${message}`);
   }
 
-  /**
-   * Replace the process parameters in the statement to a more random key to prevent key collision
-   * @param statement
-   * @param parameters
-   */
-  private _randomizeParameterKeys(
-    statement: string,
-    parameters?: Neo4jProperties
-  ) {
-    if (!parameters) {
-      return {
-        statement,
-        parameters,
-      };
-    }
-
-    // extract all the keys from the statement
-    const keys = statement.match(/\$[a-zA-Z0-9]+/g);
-    if (!keys) {
-      return {
-        statement,
-        parameters,
-      };
-    }
-
-    let newStatement = "";
-    let newParameters: Neo4jProperties = {};
-
-    console.log(keys);
-
-    for (const key of keys) {
-      const newKey = this._randomizeKey(key);
-      newStatement = statement.replace(key, newKey);
-      newParameters[newKey.substring(1)] = parameters[key.substring(1)]; // Drop the $ from the key
-    }
-
-    return {
-      statement: newStatement,
-      parameters: newParameters,
-    };
-  }
-
   private _checkAliasValid(statement: string): boolean {
     // extract the alias value from the statement (n.name = $name --> n)
-    const alias = statement.match(/\b[a-zA-Z_$][a-zA-Z0-9_$]*\./);
+    const alias = extractAliasFromSet(statement);
 
     // If the alias match is not 1, then the alias is not valid
     if (!alias || alias.length !== 1) {
       return false;
     }
 
-    // Get the alias value
-    const aliasValue = alias[0].replace(".", "");
+    let valid = true;
 
-    // Check if the alias value is in the set
-    return this._aliasSet.has(aliasValue);
+    for (const aliasValue of alias) {
+      // Check if the alias value is in the set
+      if (!this._aliasSet.has(aliasValue)) {
+        valid = false;
+        throw new QueryBuilderException(
+          `The alias ${aliasValue} is not valid. Check if the alias is in the match, create, with, merge or optional match clause`
+        );
+      }
+    }
+
+    return valid;
   }
 
   private _createSingleStatement(
@@ -162,7 +123,7 @@ export class WhereClauseBuilder {
 
     // Randomize the parameters
     const { statement: newStatement, parameters: newParameters } =
-      this._randomizeParameterKeys(statement, parameters);
+      randomizeParameterKeys(statement, parameters ?? {});
 
     // Add the parameters to the existing parameters
     mergeProperties(this._parameters, newParameters ?? {});
@@ -197,7 +158,7 @@ export class WhereClauseBuilder {
       builderFunction(builder);
 
       // Extract the parameters, aliasList and whereNodeList
-      const { _parameters, _aliasSet, _whereNodeList } = builder;
+      const { _parameters, _whereNodeList } = builder;
 
       mergeProperties(this._parameters, _parameters);
 
@@ -233,7 +194,7 @@ export class WhereClauseBuilder {
     // If the length of the nodelist is not 0, throw an error
     if (this._whereNodeList.length !== 0) {
       throw new QueryBuilderException(
-        "The add function must only be called once"
+        "The add function must only be called once. Did you mean to use the and/or function?"
       );
     }
 
@@ -337,10 +298,24 @@ export class WhereClauseBuilder {
   }
 
   public toParameterizedQuery() {
-    // In order -> build the where clause
-    const result = this._buildNodes(this._whereNodeList, [], this._parameters);
+    if (this._whereNodeList.length === 0) {
+      return {
+        query: "",
+        parameters: {},
+      };
+    }
 
-    return result;
+    // In order -> build the where clause
+    const { query, parameters } = this._buildNodes(
+      this._whereNodeList,
+      [],
+      this._parameters
+    );
+
+    return {
+      query: `WHERE ${query}`,
+      parameters,
+    };
   }
 
   public toRawQuery() {
