@@ -45,12 +45,7 @@ export function mergeProperties(
   });
 }
 
-/**
- * Extract the aliases from the statement
- * @param statement
- * @returns
- */
-export function extractAliases(statement: string) {
+function _matchDotAliases(statement: string) {
   const resultSet = new Set<string>();
 
   // Format of n.name = $name, extract n
@@ -63,13 +58,68 @@ export function extractAliases(statement: string) {
     }
   }
 
+  return resultSet;
+}
+
+function _matchBracketAliases(statement: string) {
+  const resultSet = new Set<string>();
+
   // extract from bracketed aliases
   const bracketNotationRegex = /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\[[^\]]+\]/g;
-
   let match: RegExpExecArray | null;
   while ((match = bracketNotationRegex.exec(statement)) !== null) {
     // Add the group 1 to the resultSet (first group is the full match)
     resultSet.add(match[1]);
+  }
+
+  return resultSet;
+}
+
+function _matchPathAliases(statement: string) {
+  const resultSet = new Set<string>();
+
+  // extract from path notations e.g. (n)-[:REL]->(m)
+  const pathMatched = statement.match(/(?<=\(|\[)(\w+)(?=\s|:|\)|\])/g);
+  if (pathMatched) {
+    for (const alias of pathMatched) {
+      resultSet.add(alias);
+    }
+  }
+
+  return resultSet;
+}
+
+/**
+ * Extract the aliases from the set statement
+ * @param statement
+ * @returns
+ */
+export function extractAliasFromSet(statement: string) {
+  const resultSet = new Set<string>();
+
+  const dotAliases = _matchDotAliases(statement);
+  for (const alias of dotAliases) {
+    resultSet.add(alias);
+  }
+
+  const bracketAliases = _matchBracketAliases(statement);
+  for (const alias of bracketAliases) {
+    resultSet.add(alias);
+  }
+
+  return Array.from(resultSet);
+}
+
+/**
+ * Extract aliases from the path patterns e.g.) (n)-[:REL]->(m)
+ * @param statement
+ */
+export function extractAliasFromPath(statement: string) {
+  const resultSet = new Set<string>();
+
+  const pathAliases = _matchPathAliases(statement);
+  for (const alias of pathAliases) {
+    resultSet.add(alias);
   }
 
   return Array.from(resultSet);

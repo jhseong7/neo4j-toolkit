@@ -1,6 +1,7 @@
 import { Neo4jProperties } from "../types";
 import {
-  extractAliases,
+  extractAliasFromPath,
+  extractAliasFromSet,
   mergeProperties,
   randomizeKey,
   randomizeParameterKeys,
@@ -81,25 +82,56 @@ describe("QueryBuilderUtil", () => {
     });
   });
 
-  describe("extractAliases", () => {
+  describe("extractAliasFromSet", () => {
     it("extract dot aliases", () => {
       const statement = "n.name = $name";
-      expect(extractAliases(statement)).toEqual(["n"]);
+      expect(extractAliasFromSet(statement)).toEqual(["n"]);
     });
 
     it("extract multiple dot aliases", () => {
       const statement = "n.name = $name, m.age = $age";
-      expect(extractAliases(statement)).toEqual(["n", "m"]);
+      expect(extractAliasFromSet(statement)).toEqual(["n", "m"]);
     });
 
     it("extract bracketed aliases", () => {
       const statement = "n[name] = $name, m[age] = $age";
-      expect(extractAliases(statement)).toEqual(["n", "m"]);
+      expect(extractAliasFromSet(statement)).toEqual(["n", "m"]);
     });
 
     it("extract mixed aliases", () => {
       const statement = "n.name = $name, m[age] = $age";
-      expect(extractAliases(statement)).toEqual(["n", "m"]);
+      expect(extractAliasFromSet(statement)).toEqual(["n", "m"]);
+    });
+  });
+
+  describe("extractAliasFromPath", () => {
+    it("extract from path alias (n)-[:REL]->(m)", () => {
+      const statement = "(n)-[:REL]->(m)";
+      expect(extractAliasFromPath(statement)).toEqual(["n", "m"]);
+    });
+
+    it("extract from path alias (n)", () => {
+      const statement = "(n)";
+      expect(extractAliasFromPath(statement)).toEqual(["n"]);
+    });
+
+    it("extract from complex path with properties and multiple labels", () => {
+      const statement =
+        "(n:Person {name: $name})-[r:REL]->(m:Person {name: $name})";
+      expect(extractAliasFromPath(statement)).toEqual(["n", "r", "m"]);
+    });
+
+    it("extract from complex path with properties and multiple labels", () => {
+      const statement =
+        "(n:Person {name: $name})-[r:REL]->(m:Person {name: $name})--(o:Person)-->(p:Person)";
+
+      expect(extractAliasFromPath(statement)).toEqual([
+        "n",
+        "r",
+        "m",
+        "o",
+        "p",
+      ]);
     });
   });
 
