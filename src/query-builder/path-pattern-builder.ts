@@ -37,6 +37,14 @@ type PathPatternGraphElement =
   | PathPatternGraphElementNode
   | PathPatternGraphElementRelationship;
 
+export class StartNodeNotSetException extends QueryBuilderException {
+  constructor() {
+    super(
+      "Cannot connect node to nothing. Add a start node or relationship first. Use setNode or setRelationship"
+    );
+  }
+}
+
 function getConnectionSymbol(element: PathPatternGraphElement) {
   if (element.type === "node") {
     switch (element.nextType) {
@@ -259,15 +267,11 @@ export class PathPatternBuilder {
    */
   public toNode(node: NodePatternBuilderContructor) {
     if (!this._startElement) {
-      throw new QueryBuilderException(
-        "Cannot connect node to nothing. Add a start node or relationship first"
-      );
+      throw new StartNodeNotSetException();
     }
 
     if (!this._lastElement) {
-      throw new QueryBuilderException(
-        "Cannot connect node to nothing. Add a start node or relationship first"
-      );
+      throw new StartNodeNotSetException();
     }
 
     // Handle if the last element is a relationship + has no previous element (ghost node add)
@@ -332,15 +336,11 @@ export class PathPatternBuilder {
    */
   public fromNode(node: NodePatternBuilderContructor) {
     if (!this._startElement) {
-      throw new QueryBuilderException(
-        "Cannot connect node to nothing. Add a start node or relationship first"
-      );
+      throw new StartNodeNotSetException();
     }
 
     if (!this._lastElement) {
-      throw new QueryBuilderException(
-        "Cannot connect node to nothing. Add a start node or relationship first"
-      );
+      throw new StartNodeNotSetException();
     }
 
     // Handle if the last element is a relationship + has no previous element (ghost node add)
@@ -390,15 +390,11 @@ export class PathPatternBuilder {
    */
   public addNode(node: NodePatternBuilderContructor) {
     if (!this._startElement) {
-      throw new QueryBuilderException(
-        "Cannot connect node to nothing. Add a start node or relationship first"
-      );
+      throw new StartNodeNotSetException();
     }
 
     if (!this._lastElement) {
-      throw new QueryBuilderException(
-        "Cannot connect node to nothing. Add a start node or relationship first"
-      );
+      throw new StartNodeNotSetException();
     }
 
     // Cannot add a un-directed node to a relationship
