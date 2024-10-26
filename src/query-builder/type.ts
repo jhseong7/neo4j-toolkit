@@ -1,7 +1,7 @@
 import { Neo4jProperties } from "@/types";
 
 export type ParameterizedQuery = {
-  alias?: string;
+  aliasSet?: Set<string>;
   query: string;
   parameters: Neo4jProperties;
 };

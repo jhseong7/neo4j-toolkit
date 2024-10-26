@@ -198,7 +198,15 @@ const builder = QueryBuilder.new()
 
 ### Limitations
 
-unsupported syntaxes (YET! 😅. Will try to support in the future):
+There are many unsupported syntaxes (YET! 😅. Will try to support in the future)
 
-- WITH clause
-- CASE clause
+Only the basic syntaxes are supported:
+
+- MATCH
+- WHERE
+- RETURN
+- ORDER BY
+- SKIP
+- LIMIT
+- CREATE
+- MERGE (partial support)

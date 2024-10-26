@@ -20,7 +20,7 @@ describe("ReturnBuilder", () => {
     const TEST_STATEMENT = "n.name";
 
     expect(() => {
-      new ReturnClauseBuilder().add(TEST_STATEMENT);
+      new ReturnClauseBuilder().add(TEST_STATEMENT).toRawQuery();
     }).toThrow();
   });
 
@@ -54,5 +54,14 @@ describe("ReturnBuilder", () => {
     expect(builder.toRawQuery()).toBe(
       "RETURN n.name AS givenName, m.age AS givenAge"
     );
+  });
+
+  it("Test setAlias", () => {
+    const builder = new ReturnClauseBuilder()
+      .add("n.name")
+      .add("m.age")
+      .setAliasList(["n", "m"]);
+
+    expect(builder.toRawQuery()).toBe("RETURN n.name, m.age");
   });
 });

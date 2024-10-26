@@ -137,4 +137,13 @@ describe("WhereClauseBuilder", () => {
       'WHERE n.name = "value1" AND ( m.age = "value2" OR ( m.age = 10 AND ( m.age = 20 OR m.age = 30 ) ) )'
     );
   });
+
+  it("Test setAliasList", () => {
+    const builder = new WhereClauseBuilder()
+      .add("n.name = $name", { name: "value1" })
+      .and("m.age = $age", { age: 10 })
+      .setAliasList(["n", "m"]);
+
+    expect(builder.toRawQuery()).toBe('WHERE n.name = "value1" AND m.age = 10');
+  });
 });

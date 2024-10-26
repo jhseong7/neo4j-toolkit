@@ -295,7 +295,7 @@ describe("PathPatternBuilder", () => {
     it("Duplicate alias", () => {
       const builder = PathPatternBuilder.new()
         .setNode({ alias: "n" })
-        .toNode({ alias: "n" });
+        .toRelationship({ alias: "n" });
 
       expect(() => builder.toRawQuery()).toThrow();
     });
@@ -332,6 +332,15 @@ describe("PathPatternBuilder", () => {
           .toNode({ properties: { name: "John Doe" } })
           .toParameterizedQuery()
       ).toThrow();
+    });
+
+    it("If the element has the same alias for the same type, it must not throw", () => {
+      expect(() =>
+        PathPatternBuilder.new()
+          .setNode({ alias: "n" })
+          .toNode({ alias: "n" })
+          .toParameterizedQuery()
+      ).not.toThrow();
     });
   });
 });

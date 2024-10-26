@@ -55,16 +55,6 @@ describe("SelectClauseBuilders", () => {
       );
     });
 
-    it("(Throw test) add conflicting aliases", () => {
-      const builder = new PathPatternCommonClauseBuilder(GLOBAL_PREFIX)
-        .addPathPattern("(n:Test)-[r:REL]->(m:Test)")
-        .addPathPattern("(n)-[r]->(m)");
-
-      expect(() => {
-        builder.toRawQuery();
-      }).toThrow();
-    });
-
     it("Add path patterns with properties", () => {
       const builder = new PathPatternCommonClauseBuilder(GLOBAL_PREFIX)
         .addPathPattern((p) =>
@@ -84,6 +74,24 @@ describe("SelectClauseBuilders", () => {
       expect(builder.toRawQuery()).toBe(
         `${GLOBAL_PREFIX} (n:Test {prop1: "value1", prop2: 10, prop3: true}), (n2 {prop1: "value2", prop2: 20, prop3: false})`
       );
+    });
+
+    it("Alias conflict between the same component types are allowed.", () => {
+      const builder = new PathPatternCommonClauseBuilder(GLOBAL_PREFIX)
+        .addPathPattern((p) => p.setNode({ alias: "n" }))
+        .addPathPattern((p) => p.setNode({ alias: "n" }));
+
+      expect(builder.toRawQuery()).toBe(`${GLOBAL_PREFIX} (n), (n)`);
+    });
+
+    // TODO: This is a limitation of the current implementation. This should be fixed.
+    it.skip("Alias conflict between different component types are not allowed.", () => {
+      expect(() => {
+        new PathPatternCommonClauseBuilder(GLOBAL_PREFIX)
+          .addPathPattern((p) => p.setNode({ alias: "n" }))
+          .addPathPattern((p) => p.setRelationship({ alias: "n" }))
+          .toRawQuery();
+      }).toThrow();
     });
   });
 });

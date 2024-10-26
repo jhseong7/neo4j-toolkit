@@ -102,6 +102,48 @@ export class PathPatternBuilder {
     console.warn(message);
   }
 
+  private _mergeAliasSet(
+    targetSet: Set<string>,
+    sourceSet: Set<string>,
+    throwOnConflict = false
+  ): void {
+    for (const alias of sourceSet) {
+      // If alias is a empty string, skip
+      if (!alias) {
+        continue;
+      }
+
+      if (targetSet.has(alias)) {
+        if (throwOnConflict) {
+          throw new QueryBuilderException(
+            `The alias ${alias} is already in the set of aliases. Aliases must be unique`
+          );
+        }
+        continue;
+      }
+
+      targetSet.add(alias);
+    }
+  }
+
+  /**
+   * Check if there is a conflict between the aliases
+   * @param validationSet
+   * @param testSet
+   */
+  private _checkAliasConflict(
+    validationSet: Set<string>,
+    testSet: Set<string>
+  ) {
+    for (const alias of testSet) {
+      if (validationSet.has(alias)) {
+        throw new QueryBuilderException(
+          `The alias ${alias} is already in the set of aliases. Aliases must be unique`
+        );
+      }
+    }
+  }
+
   public static new() {
     return new PathPatternBuilder();
   }
@@ -474,8 +516,10 @@ export class PathPatternBuilder {
     let currentElement: PathPatternGraphElement | undefined =
       this._startElement;
 
-    // From the start element -> build the query one by one
-    const aliasSet = new Set<string>();
+    // The alias conflict only happens between nodes and relationships
+    // No conflict can happen between nodes and nodes or relationships and relationships
+    const nodeAliasSet = new Set<string>();
+    const relationshipAliasSet = new Set<string>();
 
     while (this._elementCnt-- > 0) {
       if (!currentElement) {
@@ -485,14 +529,26 @@ export class PathPatternBuilder {
       }
 
       const { builder } = currentElement;
-      const { alias, query, parameters } = builder.toParameterizedQuery();
-      if (alias) {
-        if (aliasSet.has(alias)) {
-          throw new QueryBuilderException(
-            `Alias ${alias} already exists. Aliases must be unique`
-          );
+      const {
+        aliasSet: builderAliasSet,
+        query,
+        parameters,
+      } = builder.toParameterizedQuery();
+      if (builderAliasSet && builderAliasSet.size > 0) {
+        // Merge the alias set depending on the builder type
+        if (currentElement.type === "node") {
+          this._mergeAliasSet(nodeAliasSet, builderAliasSet);
+
+          // Check alias conflict between node and relationship
+          this._checkAliasConflict(relationshipAliasSet, builderAliasSet);
         }
-        aliasSet.add(alias);
+
+        if (currentElement.type === "relationship") {
+          this._mergeAliasSet(relationshipAliasSet, builderAliasSet);
+
+          // Check alias conflict between node and relationship
+          this._checkAliasConflict(nodeAliasSet, builderAliasSet);
+        }
       }
 
       // Add the query to the query string
@@ -512,14 +568,14 @@ export class PathPatternBuilder {
     }
 
     // If the aliases are all emtpy, throw an error
-    if (aliasSet.size === 0) {
+    if (nodeAliasSet.size === 0 && relationshipAliasSet.size === 0) {
       throw new QueryBuilderException(
         "At least one alias must be provided in the query"
       );
     }
 
     return {
-      aliases: Array.from(aliasSet),
+      aliases: new Set([...nodeAliasSet, ...relationshipAliasSet]),
       query: queryString,
       parameters: queryParameters,
     };
