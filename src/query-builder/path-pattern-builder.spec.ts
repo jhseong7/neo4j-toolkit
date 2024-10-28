@@ -289,6 +289,46 @@ describe("PathPatternBuilder", () => {
         `(n:Person)-[r:KNOWS {since: 2010}]->(m:Person {name: "John Doe"})-[r2:LIKES {rating: 5}]->(o:Person {name: "Jane Doe"})`
       );
     });
+
+    it("Test shortest path", () => {
+      const builder = PathPatternBuilder.new()
+        .setNode({ alias: "n", labels: ["Person"] })
+        .toRelationship({
+          alias: "r",
+          label: "KNOWS",
+          properties: { since: 2010 },
+        })
+        .toNode({
+          alias: "m",
+          labels: ["Person"],
+          properties: { name: "John Doe" },
+        })
+        .shortestPath("p", 3);
+
+      expect(builder.toRawQuery()).toBe(
+        `p = SHORTEST 3 (n:Person)-[r:KNOWS {since: 2010}]->(m:Person {name: "John Doe"})`
+      );
+    });
+
+    it("Test shortest all path", () => {
+      const builder = PathPatternBuilder.new()
+        .setNode({ alias: "n", labels: ["Person"] })
+        .toRelationship({
+          alias: "r",
+          label: "KNOWS",
+          properties: { since: 2010 },
+        })
+        .toNode({
+          alias: "m",
+          labels: ["Person"],
+          properties: { name: "John Doe" },
+        })
+        .shortestPath("p");
+
+      expect(builder.toRawQuery()).toBe(
+        `p = ALL SHORTEST (n:Person)-[r:KNOWS {since: 2010}]->(m:Person {name: "John Doe"})`
+      );
+    });
   });
 
   describe("Test exception cases", () => {
@@ -341,6 +381,26 @@ describe("PathPatternBuilder", () => {
           .toNode({ alias: "n" })
           .toParameterizedQuery()
       ).not.toThrow();
+    });
+
+    it("Conflict of alias in shortestPath", () => {
+      expect(() =>
+        PathPatternBuilder.new()
+          .setNode({ alias: "n" })
+          .toNode({ alias: "m" })
+          .shortestPath("n")
+          .toParameterizedQuery()
+      ).toThrow();
+    });
+
+    it("shortest path length = 0", () => {
+      expect(() =>
+        PathPatternBuilder.new()
+          .setNode({ alias: "n" })
+          .toNode({ alias: "m" })
+          .shortestPath("p", 0)
+          .toParameterizedQuery()
+      ).toThrow();
     });
   });
 });

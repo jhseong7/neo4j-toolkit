@@ -95,6 +95,11 @@ export class PathPatternBuilder {
 
   private _elementCnt = 0;
 
+  // Methods to determine the shortest path pattern e.g.) p = SHORTEST PATH 1 (n)-->(m)
+  private _shortestPathAlias = "";
+  private _shortestPath = false;
+  private _shortestPathLength?: number;
+
   constructor() {}
 
   private _printWarning(message: string) {
@@ -461,6 +466,25 @@ export class PathPatternBuilder {
     return this;
   }
 
+  /**
+   * Set the alias of the shortest path if the length is not given, ALL SHORTEST will be used
+   * @param alias
+   * @param length
+   * @returns
+   */
+  public shortestPath(alias: string, length?: number): PathPatternBuilder {
+    if (length !== undefined && length <= 0) {
+      throw new QueryBuilderException(
+        "The length of the shortest path must be greater than 0"
+      );
+    }
+
+    this._shortestPathAlias = alias;
+    this._shortestPath = true;
+    this._shortestPathLength = length;
+    return this;
+  }
+
   public toParameterizedQuery() {
     // If no start element or last element is set, throw an error
     if (!this._startElement || !this._lastElement) {
@@ -574,8 +598,32 @@ export class PathPatternBuilder {
       );
     }
 
+    // Combine the alias set
+    const combinedAliasSet = new Set([
+      ...nodeAliasSet,
+      ...relationshipAliasSet,
+    ]);
+
+    // If the shortest path is set, add the shortest path to the query
+    if (this._shortestPath) {
+      // this will throw if the alias is already in the set in a node or relationship
+      this._mergeAliasSet(
+        combinedAliasSet,
+        new Set([this._shortestPathAlias]),
+        true
+      );
+
+      if (this._shortestPathLength !== undefined) {
+        queryString = `${this._shortestPathAlias} = SHORTEST ${this._shortestPathLength} ${queryString}`;
+      }
+
+      if (this._shortestPathLength === undefined) {
+        queryString = `${this._shortestPathAlias} = ALL SHORTEST ${queryString}`;
+      }
+    }
+
     return {
-      aliases: new Set([...nodeAliasSet, ...relationshipAliasSet]),
+      aliases: combinedAliasSet,
       query: queryString,
       parameters: queryParameters,
     };
