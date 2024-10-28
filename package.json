@@ -5,6 +5,10 @@
   "main": "dist/index.js",
   "repository": "https://github.com/jhseong7/neo4j-toolkit",
   "author": "jhseong7",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "peerDependencies": {
     "neo4j-driver": "^5.26.0"
   },
@@ -13,7 +17,11 @@
     "prebuild:prod": "rm -rf dist/*",
     "build": "tsc",
     "build:prod": "tsc -p tsconfig.prod.json",
-    "test": "jest"
+    "test": "jest",
+    "prepublish:npm": "yarn build:prod",
+    "prepublish:gh": "yarn build:prod",
+    "publish:npm": "yarn publish",
+    "publish:gh": "yarn publish --registry=https://npm.pkg.github.com"
   },
   "devDependencies": {
     "@types/jest": "^29.5.13",
