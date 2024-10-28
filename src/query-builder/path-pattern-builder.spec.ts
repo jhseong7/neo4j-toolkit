@@ -323,10 +323,72 @@ describe("PathPatternBuilder", () => {
           labels: ["Person"],
           properties: { name: "John Doe" },
         })
-        .shortestPath("p");
+        .shortestPath({
+          alias: "p",
+          isAll: true,
+        });
 
       expect(builder.toRawQuery()).toBe(
         `p = ALL SHORTEST (n:Person)-[r:KNOWS {since: 2010}]->(m:Person {name: "John Doe"})`
+      );
+    });
+
+    it("Test shortest path group", () => {
+      const builder = PathPatternBuilder.new()
+        .setNode({ alias: "n", labels: ["Person"] })
+        .toRelationship({
+          alias: "r",
+          label: "KNOWS",
+          properties: { since: 2010 },
+        })
+        .toNode({
+          alias: "m",
+          labels: ["Person"],
+          properties: { name: "John Doe" },
+        })
+        .shortestPath({
+          alias: "p",
+          length: 3,
+          isGroup: true,
+        });
+
+      expect(builder.toRawQuery()).toBe(
+        `p = SHORTEST 3 GROUPS (n:Person)-[r:KNOWS {since: 2010}]->(m:Person {name: "John Doe"})`
+      );
+    });
+
+    it("Test shortest path with empty length but not all", () => {
+      const builder = PathPatternBuilder.new()
+        .setNode({ alias: "n", labels: ["Person"] })
+        .toRelationship({
+          alias: "r",
+          label: "KNOWS",
+          properties: { since: 2010 },
+        })
+        .toNode({
+          alias: "m",
+          labels: ["Person"],
+          properties: { name: "John Doe" },
+        });
+    });
+
+    it("Test shortest path with no length and all", () => {
+      const builder = PathPatternBuilder.new()
+        .setNode({ alias: "n", labels: ["Person"] })
+        .toRelationship({
+          alias: "r",
+          label: "KNOWS",
+          properties: { since: 2010 },
+        })
+        .toNode({
+          alias: "m",
+          labels: ["Person"],
+          properties: { name: "John Doe" },
+        })
+        .shortestPath("p");
+
+      expect(builder.toRawQuery()).toBe(
+        `p = SHORTEST (n:Person)-[r:KNOWS {since: 2010}]->(m:Person {name: "John Doe"})`
       );
     });
   });

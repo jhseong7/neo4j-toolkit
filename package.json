@@ -1,6 +1,6 @@
 {
-  "name": "neo4j-toolkit",
-  "version": "0.0.1",
+  "name": "@jhseong7/neo4j-toolkit",
+  "version": "0.0.2",
   "description": "Neo4j toolkits for node.js",
   "main": "dist/index.js",
   "repository": "https://github.com/jhseong7/neo4j-toolkit",
@@ -21,7 +21,8 @@
     "prepublish:npm": "yarn build:prod",
     "prepublish:gh": "yarn build:prod",
     "publish:npm": "yarn publish",
-    "publish:gh": "yarn publish --registry=https://npm.pkg.github.com"
+    "publish:gh": "yarn publish --registry=https://npm.pkg.github.com",
+    "publish": "yarn publish:npm && yarn publish:gh"
   },
   "devDependencies": {
     "@types/jest": "^29.5.13",

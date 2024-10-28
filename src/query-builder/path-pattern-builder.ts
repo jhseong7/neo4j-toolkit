@@ -37,6 +37,13 @@ type PathPatternGraphElement =
   | PathPatternGraphElementNode
   | PathPatternGraphElementRelationship;
 
+type ShortestPathOptions = {
+  alias: string;
+  length?: number;
+  isGroup?: boolean;
+  isAll?: boolean;
+};
+
 export class StartNodeNotSetException extends QueryBuilderException {
   constructor() {
     super(
@@ -96,9 +103,7 @@ export class PathPatternBuilder {
   private _elementCnt = 0;
 
   // Methods to determine the shortest path pattern e.g.) p = SHORTEST PATH 1 (n)-->(m)
-  private _shortestPathAlias = "";
-  private _shortestPath = false;
-  private _shortestPathLength?: number;
+  private _shortestPathOptions?: ShortestPathOptions;
 
   constructor() {}
 
@@ -467,21 +472,42 @@ export class PathPatternBuilder {
   }
 
   /**
-   * Set the alias of the shortest path if the length is not given, ALL SHORTEST will be used
-   * @param alias
-   * @param length
-   * @returns
+   * Set the shortest path pattern
+   * @param alias The alias of the shortest path
+   * @param length The length of the shortest path (p = SHORTEST 1)
+   * @returns The path pattern builder
    */
-  public shortestPath(alias: string, length?: number): PathPatternBuilder {
-    if (length !== undefined && length <= 0) {
+  public shortestPath(alias: string, length?: number): PathPatternBuilder;
+
+  /**
+   * Set the shortest path pattern
+   * @param option - The options for the shortest path
+   * @returns The path pattern builder
+   */
+  public shortestPath(option: ShortestPathOptions): PathPatternBuilder;
+  public shortestPath(
+    arg1: ShortestPathOptions | string,
+    arg2?: number
+  ): PathPatternBuilder {
+    if (typeof arg1 === "string") {
+      const alias = arg1;
+      const length = arg2;
+
+      return this.shortestPath({
+        alias,
+        length,
+      });
+    }
+
+    const option = arg1;
+
+    if (option.length !== undefined && option.length <= 0) {
       throw new QueryBuilderException(
         "The length of the shortest path must be greater than 0"
       );
     }
+    this._shortestPathOptions = option;
 
-    this._shortestPathAlias = alias;
-    this._shortestPath = true;
-    this._shortestPathLength = length;
     return this;
   }
 
@@ -605,21 +631,34 @@ export class PathPatternBuilder {
     ]);
 
     // If the shortest path is set, add the shortest path to the query
-    if (this._shortestPath) {
+    if (this._shortestPathOptions !== undefined) {
+      const {
+        alias,
+        length,
+        isGroup = false,
+        isAll = false,
+      } = this._shortestPathOptions;
+
       // this will throw if the alias is already in the set in a node or relationship
-      this._mergeAliasSet(
-        combinedAliasSet,
-        new Set([this._shortestPathAlias]),
-        true
-      );
+      this._mergeAliasSet(combinedAliasSet, new Set([alias]), true);
 
-      if (this._shortestPathLength !== undefined) {
-        queryString = `${this._shortestPathAlias} = SHORTEST ${this._shortestPathLength} ${queryString}`;
+      let shortestPathQuery = "";
+      if (isAll) {
+        shortestPathQuery = `${alias} = ALL SHORTEST`;
+      } else {
+        shortestPathQuery = `${alias} = SHORTEST`;
+
+        if (length && length > 0) {
+          shortestPathQuery += ` ${length}`;
+        }
       }
 
-      if (this._shortestPathLength === undefined) {
-        queryString = `${this._shortestPathAlias} = ALL SHORTEST ${queryString}`;
+      // Add the groups if the groups are set
+      if (isGroup) {
+        shortestPathQuery += ` GROUPS`;
       }
+
+      queryString = `${shortestPathQuery} ${queryString}`;
     }
 
     return {
